@@ -1,0 +1,74 @@
+# Environment and Local Secrets
+.env
+.env.local
+*.env
+service-account*.json
+firebase-credentials.json
+client_secret*.json
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+.venv/
+env/
+ENV/
+
+# Node & Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+dist/
+dist-ssr/
+*.local
+
+# Media Storage & Temp Files
+storage/media/renders/*
+!storage/media/renders/.gitkeep
+storage/media/temp/*
+!storage/media/temp/.gitkeep
+storage/media/thumbnails/*
+!storage/media/thumbnails/.gitkeep
+storage/cache/*
+!storage/cache/.gitkeep
+*.mp4
+*.wav
+*.mp3
+
+# Database & Logs
+*.sqlite
+*.sqlite3
+*.db
+*.log
+logs/
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

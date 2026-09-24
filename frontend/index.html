@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Affiliate Growth Engine | Production Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">⚡</div>
+        <div class="brand-text">
+          <h2>Growth Engine</h2>
+          <span class="badge-pro">AI AUTONOMOUS</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="tab-discovery">
+          <span class="nav-icon">🔍</span>
+          <span>Discovery & Scoring</span>
+        </button>
+        <button class="nav-item" data-tab="tab-content">
+          <span class="nav-icon">🎬</span>
+          <span>Content & Video Studio</span>
+        </button>
+        <button class="nav-item" data-tab="tab-approvals">
+          <span class="nav-icon">🛡️</span>
+          <span>Approval Queue</span>
+          <span class="nav-count" id="pending-approvals-count">0</span>
+        </button>
+        <button class="nav-item" data-tab="tab-publishing">
+          <span class="nav-icon">🚀</span>
+          <span>Publishing & Queue</span>
+          <span class="nav-count" id="queued-jobs-count">0</span>
+        </button>
+        <button class="nav-item" data-tab="tab-analytics">
+          <span class="nav-icon">📊</span>
+          <span>Revenue & Analytics</span>
+        </button>
+        <button class="nav-item" data-tab="tab-growth">
+          <span class="nav-icon">🧠</span>
+          <span>AI Growth Strategist</span>
+        </button>
+      </nav>
+
+      <!-- Worker Heartbeat Box -->
+      <div class="worker-card">
+        <div class="worker-header">
+          <span class="pulse-indicator"></span>
+          <span class="worker-title">Local Worker</span>
+          <span class="worker-status-badge" id="worker-status">ONLINE</span>
+        </div>
+        <div class="worker-stat">
+          <span>Approval Mode</span>
+          <strong id="worker-mode">SEMI_AUTO</strong>
+        </div>
+        <div class="worker-stat">
+          <span>Disk Free</span>
+          <strong id="worker-disk">-- GB</strong>
+        </div>
+        <div class="worker-stat">
+          <span>Tag</span>
+          <span class="tag-pill" id="affiliate-tag-display">mybudgetdeal9-21</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Navbar -->
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1 id="page-title">Product Discovery & Intelligence</h1>
+          <p id="page-subtitle">Discover high-converting Amazon deals, evaluate 7-factor virality scores, and inject affiliate tags.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-outline" id="btn-refresh-data">
+            <span class="btn-icon">🔄</span> Refresh
+          </button>
+          <button class="btn btn-primary" id="btn-process-worker">
+            <span class="btn-icon">⚡</span> Run Worker Job
+          </button>
+        </div>
+      </header>
+
+      <!-- TAB 1: Product Discovery & Ingestion -->
+      <section class="tab-pane active" id="tab-discovery">
+        <!-- Quick URL/ASIN Importer Banner -->
+        <div class="import-card">
+          <div class="import-content">
+            <h3>⚡ Quick Amazon URL or ASIN Importer</h3>
+            <p>Paste any Amazon product link or ASIN. The engine will normalize the URL, attach your Associate Tag <code>mybudgetdeal9-21</code>, and calculate profitability.</p>
+            <form id="url-import-form" class="import-form">
+              <input type="text" id="import-input" placeholder="Paste Amazon URL (e.g. https://www.amazon.in/dp/B08...) or 10-char ASIN" required />
+              <button type="submit" class="btn btn-accent">Import & Score</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="product-search" placeholder="Search curated deals by title, keyword, or category..." />
+          </div>
+          <div class="category-filters">
+            <button class="cat-pill active" data-cat="all">All Deals</button>
+            <button class="cat-pill" data-cat="Electronics">Electronics</button>
+            <button class="cat-pill" data-cat="Smartwatches">Smartwatches</button>
+            <button class="cat-pill" data-cat="Kitchen">Kitchen</button>
+            <button class="cat-pill" data-cat="Audio">Audio</button>
+          </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="product-grid" id="product-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- TAB 2: Content Studio & Video Preview -->
+      <section class="tab-pane" id="tab-content">
+        <div class="content-studio-layout">
+          <div class="studio-sidebar">
+            <div class="card-header">
+              <h3>Select Product</h3>
+            </div>
+            <div class="product-selector-list" id="studio-product-selector">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+          <div class="studio-main">
+            <div class="variant-preview-header">
+              <div>
+                <h3 id="studio-active-product-title">Select a product to view generated creative angles</h3>
+                <p id="studio-active-product-sub">High-converting scripts, hooks, and compliant disclaimers</p>
+              </div>
+              <button class="btn btn-accent" id="btn-generate-angles" style="display:none;">
+                ✨ Regenerate 4 Angles
+              </button>
+            </div>
+            <div class="variants-container" id="studio-variants-container">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Approval Queue -->
+      <section class="tab-pane" id="tab-approvals">
+        <div class="approvals-header card">
+          <div>
+            <h3>Compliance & Human Approval Queue</h3>
+            <p>Every piece of marketing copy and video is checked against FTC guidelines, Amazon Associates rules, and copyright standards.</p>
+          </div>
+          <div class="queue-actions">
+            <button class="btn btn-outline" id="btn-approve-all">Approve All Passed</button>
+          </div>
+        </div>
+        <div class="approvals-list" id="approvals-list">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- TAB 4: Publishing & Queue -->
+      <section class="tab-pane" id="tab-publishing">
+        <div class="publishing-grid">
+          <div class="queue-card card">
+            <div class="card-header">
+              <h3>Scheduled Publishing Queue</h3>
+              <span class="badge" id="queue-length-badge">0 Jobs</span>
+            </div>
+            <div class="queue-list" id="publishing-queue-list">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <div class="channels-card card">
+            <div class="card-header">
+              <h3>Target Channels & Profiles</h3>
+            </div>
+            <div class="channel-item">
+              <div class="channel-icon ig">📸</div>
+              <div class="channel-details">
+                <strong>Instagram Reels</strong>
+                <span>@mybudgetdeal99 • Meta Graph API</span>
+              </div>
+              <span class="channel-status active">Ready</span>
+            </div>
+            <div class="channel-item">
+              <div class="channel-icon yt">▶️</div>
+              <div class="channel-details">
+                <strong>YouTube Shorts</strong>
+                <span>@mybudgetdeal99 • Data API v3</span>
+              </div>
+              <span class="channel-status active">Ready</span>
+            </div>
+            <div class="channel-item">
+              <div class="channel-icon pin">📌</div>
+              <div class="channel-details">
+                <strong>Pinterest Pins</strong>
+                <span>API v5 Boards</span>
+              </div>
+              <span class="channel-status active">Ready</span>
+            </div>
+            <div class="channel-item">
+              <div class="channel-icon web">🌐</div>
+              <div class="channel-details">
+                <strong>Affiliate Deal Portal</strong>
+                <span>adarshchauhan095.github.io/my-budget-deal-99/</span>
+              </div>
+              <span class="channel-status live">LIVE</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: Analytics & Revenue -->
+      <section class="tab-pane" id="tab-analytics">
+        <div class="stats-overview">
+          <div class="stat-card">
+            <div class="stat-label">Total Affiliate Revenue</div>
+            <div class="stat-value" id="stat-revenue">₹0.00</div>
+            <div class="stat-trend positive">↑ ₹0 Baseline Bootstrap</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Impressions & Views</div>
+            <div class="stat-value" id="stat-views">0</div>
+            <div class="stat-trend">Organic Reach</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Affiliate Link Clicks</div>
+            <div class="stat-value" id="stat-clicks">0</div>
+            <div class="stat-trend">Tag: mybudgetdeal9-21</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Attributed Orders</div>
+            <div class="stat-value" id="stat-orders">0</div>
+            <div class="stat-trend">Target: 3 sales for PA-API</div>
+          </div>
+        </div>
+
+        <div class="analytics-tables-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3>Channel Performance Attribution</h3>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Platform</th>
+                  <th>Posts</th>
+                  <th>Views</th>
+                  <th>Clicks</th>
+                  <th>Orders</th>
+                  <th>Revenue</th>
+                  <th>CVR</th>
+                </tr>
+              </thead>
+              <tbody id="platform-stats-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Top Performing Products</h3>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Price</th>
+                  <th>Score</th>
+                  <th>Clicks</th>
+                  <th>Revenue</th>
+                </tr>
+              </thead>
+              <tbody id="product-stats-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: AI Growth Strategist -->
+      <section class="tab-pane" id="tab-growth">
+        <div class="growth-banner card">
+          <div>
+            <h3>Autonomous AI Growth Strategist</h3>
+            <p>The AI continuously analyzes cross-platform click-through rates, revenue per 1,000 views, and conversion anomalies to generate actionable growth recommendations.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-run-growth-cycle">
+            🧠 Run Strategic Analysis Cycle
+          </button>
+        </div>
+
+        <div class="strategies-grid" id="strategies-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Video Preview Modal -->
+  <div class="modal-backdrop" id="video-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-video-title">Short Video Preview</h3>
+        <button class="btn-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <video id="modal-video-player" controls autoplay loop playsinline class="preview-video"></video>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
