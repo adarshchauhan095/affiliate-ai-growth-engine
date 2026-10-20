@@ -1,0 +1,271 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // 1. Operator Authentication & Authorization Helper
+    // =========================================================================
+    function isVerifiedOperator() {
+      return request.auth != null &&
+             request.auth.token.email_verified == true &&
+             request.auth.token.email == "mybudgetdeal99@gmail.com";
+    }
+
+    // =========================================================================
+    // 2. Safe Field Type & Format Helpers (Safe with Missing & Null Values)
+    // =========================================================================
+    function isOptString(data, field, maxLen) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function isOptUrl(data, field) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].matches('^https?://.*'));
+    }
+
+    function isOptTimestamp(data, field) {
+      return !(field in data) || data[field] == null || (data[field] is timestamp && data[field] <= request.time);
+    }
+
+    function isOptNumber(data, field, minVal) {
+      return !(field in data) || data[field] == null || (data[field] is number && data[field] >= minVal);
+    }
+
+    function isOptStringList(data, field, maxItems) {
+      return !(field in data) || data[field] == null || (
+        data[field] is list &&
+        data[field].size() <= maxItems
+      );
+    }
+
+    // =========================================================================
+    // 3. Entity Schema & Invariant Validators
+    // =========================================================================
+
+    function isValidProduct(data, docId) {
+      return data.id == docId &&
+             data.keys().hasAll(['id', 'seq', 'productName', 'amazonProductUrl', 'affiliateUrl', 'category', 'status', 'lastVerified', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['id', 'seq', 'productName', 'asin', 'amazonProductUrl', 'affiliateUrl', 'price', 'currency', 'priceLastChecked', 'category', 'brand', 'searchKeywords', 'imageUrl', 'productNotes', 'status', 'lastVerified', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.matches('^BD99-P[0-9]{4,}$') &&
+             data.seq is int && data.seq >= 1 &&
+             data.productName is string && data.productName.size() > 0 && data.productName.size() <= 200 &&
+             data.amazonProductUrl is string && data.amazonProductUrl.matches('^https?://.*') &&
+             data.affiliateUrl is string && data.affiliateUrl.matches('^https?://.*') &&
+             data.category is string && data.category.size() > 0 && data.category.size() <= 100 &&
+             data.status in ['Active', 'Unavailable', 'Recheck', 'Archived'] &&
+             (!('currency' in data) || data.currency in ['INR', 'USD']) &&
+             isOptNumber(data, 'price', 0) &&
+             isOptTimestamp(data, 'priceLastChecked') &&
+             isOptString(data, 'brand', 100) &&
+             isOptString(data, 'productNotes', 1000) &&
+             isOptUrl(data, 'imageUrl') &&
+             isOptStringList(data, 'searchKeywords', 50) &&
+             data.lastVerified is timestamp && data.lastVerified <= request.time &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time &&
+             // ASIN Atomic Two-Way Binding Rule:
+             (
+               !( 'asin' in data ) || data.asin == null ||
+               (
+                 data.asin is string && data.asin.matches('^[A-Z0-9]{10}$') &&
+                 getAfter(/databases/$(database)/documents/asin_index/$(data.asin)).data.productId == docId &&
+                 getAfter(/databases/$(database)/documents/asin_index/$(data.asin)).data.asin == data.asin
+               )
+             );
+    }
+
+    function isValidAsinReservation(data, asinKey) {
+      return data.asin == asinKey &&
+             data.keys().hasAll(['asin', 'productId', 'createdAt']) &&
+             data.keys().hasOnly(['asin', 'productId', 'createdAt']) &&
+             data.asin is string && data.asin.matches('^[A-Z0-9]{10}$') &&
+             data.productId is string && data.productId.matches('^BD99-P[0-9]{4,}$') &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             // Two-Way Binding: Product post-commit must point to this reservation
+             getAfter(/databases/$(database)/documents/products/$(data.productId)).data.asin == asinKey;
+    }
+
+    function isValidVideo(data, docId) {
+      return data.id == docId &&
+             data.keys().hasAll(['id', 'seq', 'title', 'platform', 'contentType', 'status', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['id', 'seq', 'title', 'platform', 'contentType', 'accountChannel', 'videoUrl', 'publishDate', 'captionHook', 'searchTags', 'status', 'notes', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.matches('^BD99-V[0-9]{4,}$') &&
+             data.seq is int && data.seq >= 1 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 250 &&
+             data.platform in ['Instagram', 'YouTube', 'Telegram', 'Facebook', 'Pinterest', 'Other'] &&
+             data.contentType in ['Reel', 'Short', 'Long-form Video', 'Post', 'Story', 'Broadcast'] &&
+             data.status in ['Draft', 'Published', 'Archived'] &&
+             isOptString(data, 'accountChannel', 100) &&
+             isOptString(data, 'captionHook', 5000) &&
+             isOptStringList(data, 'searchTags', 50) &&
+             isOptString(data, 'notes', 1000) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time &&
+             // Status-dependent requirement: Published videos MUST have valid URL and publishDate
+             (data.status != 'Published' || (
+               data.videoUrl is string && data.videoUrl.matches('^https?://.*') &&
+               data.publishDate is timestamp && data.publishDate <= request.time
+             )) &&
+             // Draft videos may have null or valid URL/date
+             (data.status == 'Published' || (
+               isOptUrl(data, 'videoUrl') && isOptTimestamp(data, 'publishDate')
+             ));
+    }
+
+    function isValidBridge(data, docId) {
+      return data.id == docId &&
+             data.keys().hasAll(['id', 'videoId', 'productId', 'linkedAt']) &&
+             data.keys().hasOnly(['id', 'videoId', 'productId', 'linkedAt']) &&
+             data.id == ('vp_' + data.videoId + '_' + data.productId) &&
+             data.linkedAt is timestamp && data.linkedAt <= request.time &&
+             // Referential existence checks
+             exists(/databases/$(database)/documents/videos/$(data.videoId)) &&
+             exists(/databases/$(database)/documents/products/$(data.productId));
+    }
+
+    function isValidComment(data, docId) {
+      return data.id == docId &&
+             data.keys().hasAll(['id', 'seq', 'dateReceived', 'platform', 'videoId', 'username', 'queryType', 'responseStatus', 'telegramCtaSent', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['id', 'seq', 'dateReceived', 'platform', 'videoId', 'username', 'queryType', 'commentText', 'resolvedProductId', 'responseStatus', 'repliedAt', 'telegramCtaSent', 'notes', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.matches('^BD99-C[0-9]{4,}$') &&
+             data.seq is int && data.seq >= 1 &&
+             data.dateReceived is timestamp && data.dateReceived <= request.time &&
+             data.username is string && data.username.size() > 0 && data.username.size() <= 100 &&
+             data.platform in ['Instagram', 'YouTube', 'Telegram'] &&
+             data.queryType in ['Details', 'Price', 'Link', 'Custom'] &&
+             data.responseStatus in ['Pending', 'Replied'] &&
+             data.telegramCtaSent in ['Yes', 'No'] &&
+             isOptString(data, 'commentText', 2000) &&
+             isOptString(data, 'notes', 1000) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time &&
+             exists(/databases/$(database)/documents/videos/$(data.videoId)) &&
+             (
+               !( 'resolvedProductId' in data ) || data.resolvedProductId == null ||
+               exists(/databases/$(database)/documents/products/$(data.resolvedProductId))
+             ) &&
+             // Status-dependent reply timestamp:
+             (data.responseStatus != 'Replied' || (data.repliedAt is timestamp && data.repliedAt <= request.time)) &&
+             (data.responseStatus != 'Pending' || !( 'repliedAt' in data ) || data.repliedAt == null);
+    }
+
+    function isValidDistribution(data) {
+      return data.keys().hasAll(['associateTag', 'tagConfirmed', 'telegramChannelUrl', 'updatedAt']) &&
+             data.keys().hasOnly(['associateTag', 'tagConfirmed', 'instagramProfileUrl', 'youtubeChannelUrl', 'telegramChannelUrl', 'standardCta', 'affiliateDisclosure', 'dmTemplate', 'updatedAt']) &&
+             data.associateTag is string && data.associateTag.size() > 0 &&
+             data.tagConfirmed is bool &&
+             data.telegramChannelUrl is string && data.telegramChannelUrl.matches('^https?://.*') &&
+             isOptUrl(data, 'instagramProfileUrl') &&
+             isOptUrl(data, 'youtubeChannelUrl') &&
+             isOptString(data, 'standardCta', 1000) &&
+             isOptString(data, 'affiliateDisclosure', 1000) &&
+             isOptString(data, 'dmTemplate', 2000) &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // Separate Counter Validators for Create vs Update (prevents resource.data crash)
+    function isValidCounterCreate(data) {
+      return data.keys().hasAll(['lastProductSeq', 'lastVideoSeq', 'lastCommentSeq']) &&
+             data.keys().hasOnly(['lastProductSeq', 'lastVideoSeq', 'lastCommentSeq']) &&
+             data.lastProductSeq is int && data.lastProductSeq >= 0 &&
+             data.lastVideoSeq is int && data.lastVideoSeq >= 0 &&
+             data.lastCommentSeq is int && data.lastCommentSeq >= 0;
+    }
+
+    function isValidCounterUpdate(data, currentData) {
+      return isValidCounterCreate(data) &&
+             data.lastProductSeq >= currentData.lastProductSeq &&
+             data.lastVideoSeq >= currentData.lastVideoSeq &&
+             data.lastCommentSeq >= currentData.lastCommentSeq;
+    }
+
+    // =========================================================================
+    // 4. Default Deny Security Core
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // 5. Collection Rules
+    // =========================================================================
+
+    // Products: ARCHIVE-ONLY (Delete is strictly forbidden)
+    match /products/{docId} {
+      allow read: if isVerifiedOperator();
+      allow create: if isVerifiedOperator() && isValidProduct(request.resource.data, docId);
+      allow update: if isVerifiedOperator() && isValidProduct(request.resource.data, docId) &&
+        // Immutable identity and sequence fields:
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.seq == resource.data.seq &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        // Old reservation deletion invariant: if ASIN changed or set to null, old reservation MUST be deleted in this commit
+        (
+          !( 'asin' in resource.data ) || resource.data.asin == null ||
+          resource.data.asin == request.resource.data.asin ||
+          !existsAfter(/databases/$(database)/documents/asin_index/$(resource.data.asin))
+        );
+      allow delete: if false; // ARCHIVE-ONLY: Hard deletion blocked
+    }
+
+    // ASIN Reservations
+    match /asin_index/{asin} {
+      allow read: if isVerifiedOperator();
+      allow create: if isVerifiedOperator() && isValidAsinReservation(request.resource.data, asin);
+      allow update: if isVerifiedOperator() && isValidAsinReservation(request.resource.data, asin) &&
+        // Explicit reassignment invariant: must reassign to different product, retain creation timestamp, and previous product must give up ASIN
+        resource.data.productId != request.resource.data.productId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        getAfter(/databases/$(database)/documents/products/$(resource.data.productId)).data.asin != asin;
+      allow delete: if isVerifiedOperator() &&
+        // Reservation deletion invariant: product must no longer exist or must have changed away from this ASIN
+        (
+          !existsAfter(/databases/$(database)/documents/products/$(resource.data.productId)) ||
+          getAfter(/databases/$(database)/documents/products/$(resource.data.productId)).data.asin != asin
+        );
+    }
+
+    // Videos: ARCHIVE-ONLY (Delete is strictly forbidden)
+    match /videos/{docId} {
+      allow read: if isVerifiedOperator();
+      allow create: if isVerifiedOperator() && isValidVideo(request.resource.data, docId);
+      allow update: if isVerifiedOperator() && isValidVideo(request.resource.data, docId) &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.seq == resource.data.seq &&
+        request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if false; // ARCHIVE-ONLY: Hard deletion blocked
+    }
+
+    // Bridge Links: Deletion allowed only when unlinking
+    match /video_products/{docId} {
+      allow read: if isVerifiedOperator();
+      allow create, update: if isVerifiedOperator() && isValidBridge(request.resource.data, docId);
+      allow delete: if isVerifiedOperator();
+    }
+
+    // Comments: Deletion allowed by operator
+    match /comments/{docId} {
+      allow read: if isVerifiedOperator();
+      allow create: if isVerifiedOperator() && isValidComment(request.resource.data, docId);
+      allow update: if isVerifiedOperator() && isValidComment(request.resource.data, docId) &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.seq == resource.data.seq &&
+        request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isVerifiedOperator();
+    }
+
+    // Distribution Settings Singleton
+    match /settings/distribution {
+      allow read: if isVerifiedOperator();
+      allow create, update: if isVerifiedOperator() && isValidDistribution(request.resource.data);
+      allow delete: if false;
+    }
+
+    // Atomic Sequence Counters Singleton
+    match /system_meta/counters {
+      allow read: if isVerifiedOperator();
+      allow create: if isVerifiedOperator() && isValidCounterCreate(request.resource.data);
+      allow update: if isVerifiedOperator() && isValidCounterUpdate(request.resource.data, resource.data);
+      allow delete: if false;
+    }
+  }
+}
