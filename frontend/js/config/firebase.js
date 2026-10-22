@@ -5,11 +5,13 @@ import { getFirestore, enableIndexedDbPersistence } from "https://www.gstatic.co
 
 // Default public Firebase project configuration
 const DEFAULT_FIREBASE_CONFIG = {
-  projectId: "affiliate-growth-ai-engine",
+  apiKey: "AIzaSyCfrTrfiGzFMnEVNdAPPtQ4uyWuEMeSyo8",
   authDomain: "affiliate-growth-ai-engine.firebaseapp.com",
-  storageBucket: "affiliate-growth-ai-engine.appspot.com",
-  apiKey: "AIzaSy_DEV_MOCK_KEY_FOR_LOCAL_ENVIRONMENT_REPLACE_IN_SETTINGS",
-  appId: "1:847291048201:web:91048201948201"
+  projectId: "affiliate-growth-ai-engine",
+  storageBucket: "affiliate-growth-ai-engine.firebasestorage.app",
+  messagingSenderId: "78149769083",
+  appId: "1:78149769083:web:9614b859cfdf6e35d14fde",
+  measurementId: "G-SXQX7X9NK5"
 };
 
 // Retrieve any custom user-provided overrides from localStorage
